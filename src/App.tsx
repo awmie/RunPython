@@ -15,7 +15,6 @@ import {
   Archive,
   Loader,
   Edit,
-  Trash,
   LucideIcon,
   Moon,
   Sun,
