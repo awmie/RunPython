@@ -18,6 +18,7 @@ import {
   LucideIcon,
   Moon,
   Sun,
+  Trash,
 } from 'lucide-react';
 
 interface SidebarTabProps {
@@ -110,6 +111,7 @@ const FileItem = memo(({ name, isActive, isDarkMode, onClick, onRename, onDelete
         className={`p-1 ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} rounded opacity-0 group-hover:opacity-100 transition-opacity text-red-500`}
         title="Delete File"
       >
+        <Trash size={12} />
       </button>
     </div>
   </div>
