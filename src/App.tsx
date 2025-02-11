@@ -408,19 +408,21 @@ const CodeEditor = () => {
         import builtins
         from io import StringIO
         from types import ModuleType
-
+        import textwrap
+        
         def run_code_safely(code_str):
             module = ModuleType('__main__')
             module.__dict__.update(builtins.__dict__)
+            module.__dict__['__name__'] = '__main__'
             stdout = StringIO()
             stderr = StringIO()
             old_stdout = sys.stdout
             old_stderr = sys.stderr
-
+            
             def custom_input(prompt=''):
                 from js import window
                 result = window.prompt(prompt)
-                window.focusEditor()  # Immediately refocus editor after prompt, regardless of OK/Cancel
+                window.focusEditor()
                 if ('int' in prompt.lower()) or ('number' in prompt.lower()):
                     try:
                         return int(result) if result is not None else 0
@@ -428,20 +430,62 @@ const CodeEditor = () => {
                         window.alert("Invalid integer input!")
                         raise ValueError("Invalid integer input!")
                 return '' if result is None else str(result)
-
+            
             module.__dict__['input'] = custom_input
-
+            
             try:
                 sys.stdout = stdout
                 sys.stderr = stderr
-                exec(code_str, module.__dict__)
+                
+                # Split code into lines
+                lines = code_str.split('\\n')
+                main_block = []
+                other_code = []
+                in_main_block = False
+                main_indent = 0
+                
+                # Separate main block from other code
+                for line in lines:
+                    if line.strip() == 'if __name__ == "__main__":':
+                        in_main_block = True
+                        main_indent = len(line) - len(line.lstrip())
+                        continue
+                    
+                    if in_main_block:
+                        if not line.strip():  # Empty line
+                            main_block.append('')
+                        elif len(line) - len(line.lstrip()) > main_indent:
+                            # Keep the relative indentation for the main block
+                            main_block.append(line[main_indent:])
+                        else:
+                            in_main_block = False
+                            if line.strip():
+                                other_code.append(line)
+                    else:
+                        other_code.append(line)
+                
+                # Only execute the main block if it exists, otherwise execute everything
+                if main_block:
+                    # First compile and execute code outside main block
+                    if other_code:
+                        outside_code = '\\n'.join(other_code)
+                        exec(compile(outside_code, '<string>', 'exec'), module.__dict__)
+                    
+                    # Then execute the main block
+                    main_code = '\\n'.join(main_block)
+                    main_code = textwrap.dedent(main_code)
+                    exec(compile(main_code, '<string>', 'exec'), module.__dict__)
+                else:
+                    # If no main block is found, just execute the code normally
+                    exec(compile(code_str, '<string>', 'exec'), module.__dict__)
+                
                 return stdout.getvalue(), stderr.getvalue()
             except Exception as e:
                 return '', str(e)
             finally:
                 sys.stdout = old_stdout
                 sys.stderr = old_stderr
-
+        
         output, error = run_code_safely(${JSON.stringify(code)})
       `;
       const pythonCode = dedent(pythonCodeTemplate);
